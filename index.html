@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AA%3C/text%3E%3C/svg%3E">
+<title>🧪 TFS Test Plan Creator</title>
+<style>
+/* ============ PINE / MARIGOLD design system (matches expense-settlement) ============ */
+:root{
+  color-scheme:dark;
+  --bg:#0C1B17; --panel:#13251F; --panel-line:rgba(233,239,234,.09);
+  --field:#0D1D18; --field-line:rgba(233,239,234,.16);
+  --surface:var(--panel); --border:var(--panel-line); --border-hi:rgba(233,239,234,.30);
+  --text:#E9EFEA; --muted:#9FB3AB; --faint:#6E837B;
+  --accent:#F5B94E; --accent-hi:#FFC963; --accent-ink:#132015;
+  --mint:#42C79F;
+  --ok:#42C79F; --warn:#F5B94E; --err:#F08A72;
+  --radius:16px; --radius-sm:10px;
+  --font:"Public Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"Cascadia Code",Consolas,"Segoe UI Mono",Menlo,monospace;
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; color:var(--text); font-family:var(--font); font-size:15px; line-height:1.5;
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(900px 480px at 85% -10%, rgba(66,199,159,.10), transparent 65%),
+    radial-gradient(760px 520px at 0% 115%, rgba(245,185,78,.07), transparent 60%),
+    radial-gradient(rgba(233,239,234,.05) 1px, transparent 1px);
+  background-size:auto,auto,26px 26px;
+  background-attachment:fixed; min-height:100dvh;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+@keyframes vg-rise{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none;} }
+@keyframes vg-spin{ to{ transform:rotate(360deg);} }
+
+/* ---- header ---- */
+header{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:14px;
+  padding:12px 22px; background:rgba(12,27,23,.92); border-bottom:1px solid var(--panel-line);
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.logo{
+  width:38px; height:38px; border-radius:10px; background:var(--accent); display:grid; place-items:center;
+  font-size:20px; flex:none; box-shadow:0 6px 18px rgba(245,185,78,.25);
+}
+header h1{ font-size:1.05rem; margin:0; font-weight:800; letter-spacing:.01em; }
+header .sub{ font-size:.74rem; color:var(--muted); margin-top:1px; font-family:var(--mono); letter-spacing:.06em; }
+.pill{
+  margin-left:auto; font-size:.76rem; padding:.3rem .8rem; border-radius:999px; font-family:var(--mono);
+  border:1px solid var(--field-line); background:var(--field); color:var(--muted); white-space:nowrap;
+}
+.pill.on{ color:var(--ok); border-color:rgba(66,199,159,.4); }
+
+/* ---- layout ---- */
+main{ max-width:1020px; margin:30px auto 70px; padding:0 18px; display:flex; flex-direction:column; gap:18px; }
+.panel{
+  background:linear-gradient(180deg,rgba(233,239,234,.045),rgba(233,239,234,0) 46%),var(--panel);
+  border:1px solid var(--panel-line); border-radius:var(--radius);
+  box-shadow:0 14px 34px rgba(0,0,0,.28);
+  padding:22px 24px; animation:vg-rise .6s ease both;
+}
+.panel + .panel{ animation-delay:.08s; }
+.panel.locked{ opacity:.42; pointer-events:none; filter:saturate(.6); }
+.step-head{ display:flex; align-items:center; gap:11px; margin-bottom:14px; }
+.step-num{
+  border-radius:6px; background:var(--accent); color:var(--accent-ink); font-weight:600;
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.1em; padding:3px 9px 2px; flex:none;
+}
+.step-head h2{ margin:0; font-size:1.15rem; font-weight:700; letter-spacing:-.01em; }
+.step-head .hint{ font-size:.76rem; color:var(--faint); margin-left:auto; text-align:right; }
+
+/* ---- forms ---- */
+label{ display:block; font-size:.7rem; text-transform:uppercase; letter-spacing:.09em; color:var(--muted); margin:0 0 6px 2px; font-weight:600; }
+input[type=text],input[type=password],select{
+  width:100%; padding:.62rem .8rem; border-radius:var(--radius-sm); font-size:.9rem; font-family:var(--font);
+  border:1px solid var(--field-line); background:var(--field); color:var(--text);
+  transition:border-color .15s ease;
+}
+input[type=text]:hover,input[type=password]:hover,select:hover{ border-color:var(--border-hi); }
+input:focus,select:focus{ outline:2px solid var(--mint); outline-offset:2px; border-color:var(--field-line); box-shadow:none; }
+input::placeholder{ color:rgba(233,239,234,.32); }
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid4{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+.frow{ display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.frow > div{ flex:1; min-width:180px; }
+.chk{ display:flex; align-items:center; gap:8px; font-size:.82rem; color:var(--muted); cursor:pointer; user-select:none; }
+.chk input{ accent-color:#F5B94E; width:15px; height:15px; cursor:pointer; }
+
+/* ---- attractive dropdowns ---- */
+select{
+  -webkit-appearance:none; -moz-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23F5B94E' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center; background-size:13px 13px;
+  padding-right:34px; cursor:pointer;
+}
+select option{ background:var(--panel); color:var(--text); }
+select option:checked{ background:#F5B94E; color:#132015; }
+@supports (appearance:base-select){
+  select{ appearance:base-select; background-image:none; padding-right:14px; }
+  ::picker(select){ appearance:base-select; }
+  select::picker-icon{ color:var(--accent); transition:transform .25s ease; }
+  select:open::picker-icon{ transform:rotate(180deg); }
+  ::picker(select){
+    border:1px solid var(--field-line); border-radius:12px; background:#122019;
+    box-shadow:0 24px 60px -16px rgba(0,0,0,.65);
+    padding:6px; opacity:0; transform:translateY(-8px) scale(.98);
+    transition:opacity .2s ease, transform .2s cubic-bezier(.16,1,.3,1), overlay .2s allow-discrete, display .2s allow-discrete;
+    max-height:320px;
+  }
+  ::picker(select):popover-open{ opacity:1; transform:translateY(0) scale(1); }
+  @starting-style{ ::picker(select):popover-open{ opacity:0; transform:translateY(-8px) scale(.98); } }
+  option{ border-radius:8px; padding:8px 12px; margin:1px 0; transition:background-color .15s ease; font-size:.88rem; }
+  option:hover, option:focus{ background:rgba(66,199,159,.14); }
+  option:checked{ background:var(--accent); color:var(--accent-ink); }
+  option::checkmark{ color:var(--accent-ink); }
+}
+
+/* ---- buttons ---- */
+button{ font-family:var(--font); }
+.btn{
+  background:var(--accent); color:var(--accent-ink); border:0; border-radius:12px;
+  padding:.7rem 1.4rem; font-weight:700; font-size:.92rem; cursor:pointer;
+  box-shadow:0 10px 24px rgba(245,185,78,.22);
+  transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+.btn:hover{ background:var(--accent-hi); box-shadow:0 12px 28px rgba(245,185,78,.3); }
+.btn:active{ transform:scale(.98); }
+.btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn.ghost{
+  background:var(--field); color:var(--muted); box-shadow:none; border:1px solid var(--field-line);
+  font-weight:500; padding:.45rem .9rem; font-size:.8rem; border-radius:9px;
+}
+.btn.ghost:hover{ color:var(--text); border-color:var(--border-hi); background:var(--field); }
+button:focus-visible{ outline:2px solid var(--mint); outline-offset:2px; }
+.spin{
+  display:inline-block; width:14px; height:14px; border-radius:50%; vertical-align:-2px; margin-right:7px;
+  border:2px solid rgba(19,32,21,.3); border-top-color:var(--accent-ink); animation:vg-spin .7s linear infinite;
+}
+
+/* ---- messages / chips ---- */
+.msg{ font-size:.83rem; margin-top:10px; min-height:1.2em; }
+.msg.err{ color:var(--err); } .msg.ok{ color:var(--ok); } .msg.info{ color:var(--muted); }
+.chips{ display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 14px; }
+.chip{
+  font-size:.78rem; padding:.32rem .75rem; border-radius:999px; border:1px solid var(--field-line);
+  background:var(--field); color:var(--muted);
+}
+.chip b{ color:var(--text); font-weight:600; }
+.chip.grad{ background:var(--accent); color:var(--accent-ink); border:0; font-weight:600; }
+.chip.grad b{ color:var(--accent-ink); }
+
+/* ---- derived panel ---- */
+.derived{
+  margin-top:16px; border:1px dashed var(--field-line); border-radius:var(--radius-sm);
+  padding:12px 16px; font-size:.85rem; display:grid; grid-template-columns:auto 1fr; gap:4px 18px;
+  background:var(--field);
+}
+.derived dt{ color:var(--faint); font-size:.7rem; text-transform:uppercase; letter-spacing:.09em; align-self:center; font-family:var(--mono); }
+.derived dd{ margin:0; font-family:var(--mono); font-size:.82rem; color:var(--mint); word-break:break-all; }
+
+/* ---- requirements table ---- */
+.tbl-wrap{ overflow-x:auto; border:1px solid var(--panel-line); border-radius:var(--radius-sm); background:var(--field); }
+table{ width:100%; border-collapse:collapse; font-size:.86rem; }
+th{
+  text-align:left; font-size:.68rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted);
+  font-family:var(--mono); font-weight:600;
+  padding:10px 12px; border-bottom:1px solid var(--field-line); background:rgba(233,239,234,.03); white-space:nowrap;
+}
+td{ padding:8px 12px; border-bottom:1px solid rgba(233,239,234,.07); }
+tbody tr:last-child td{ border-bottom:0; }
+tbody tr{ transition:background-color .15s ease; }
+tbody tr:hover td{ background:rgba(66,199,159,.06); }
+tbody tr.off{ opacity:.5; }
+td a{ color:var(--accent); text-decoration:none; font-family:var(--mono); font-size:.82rem; }
+td a:hover{ text-decoration:underline; text-underline-offset:3px; }
+.badge{ display:inline-block; font-size:.7rem; padding:.13rem .55rem; border-radius:6px; font-weight:600; white-space:nowrap; }
+.badge.yes{ background:rgba(66,199,159,.14); color:var(--ok); border:1px solid rgba(66,199,159,.32); }
+.badge.no{ background:rgba(233,239,234,.04); color:var(--faint); border:1px solid var(--panel-line); }
+.badge.dyn{ background:var(--accent); color:var(--accent-ink); }
+.badge.req{ background:rgba(66,199,159,.12); color:var(--mint); border:1px solid rgba(66,199,159,.3); }
+.badge.cr{ background:rgba(245,185,78,.12); color:var(--accent); border:1px solid rgba(245,185,78,.3); }
+.badge.state{ background:rgba(233,239,234,.05); color:var(--muted); border:1px solid var(--field-line); }
+
+/* ---- suite tree ---- */
+.tree{ font-size:.87rem; margin:6px 0 16px; }
+.tnode{ display:flex; align-items:center; gap:8px; padding:3px 0; }
+.tnode .tname{ font-weight:500; }
+.tnode.root .tname{ font-weight:700; color:var(--accent); }
+.tguide{ color:var(--faint); font-family:var(--mono); white-space:pre; }
+
+/* ---- run log ---- */
+.prog{ height:8px; border-radius:999px; background:rgba(233,239,234,.07); overflow:hidden; margin:14px 0 4px; display:none; }
+.prog .fill{ height:100%; width:0%; background:linear-gradient(90deg,#F5B94E,#42C79F); transition:width .3s ease; }
+.prog-txt{ font-size:.72rem; color:var(--faint); text-align:right; min-height:1em; font-family:var(--mono); }
+.log{
+  display:none; margin-top:10px; max-height:300px; overflow-y:auto; font-family:var(--mono); font-size:.78rem;
+  background:#0A1613; border:1px solid var(--panel-line); border-radius:var(--radius-sm); padding:10px 14px;
+  line-height:1.65;
+}
+.log div{ white-space:pre-wrap; word-break:break-all; }
+.log .ok{ color:var(--ok); } .log .err{ color:var(--err); } .log .warn{ color:var(--warn); } .log .info{ color:var(--muted); }
+
+/* ---- result card ---- */
+.result{
+  display:none; margin-top:16px; padding:18px 20px; border-radius:var(--radius-sm);
+  border:1px solid rgba(66,199,159,.35); background:rgba(66,199,159,.07);
+}
+.result.bad{ border-color:rgba(240,138,114,.4); background:rgba(240,138,114,.06); }
+.result h3{ margin:0 0 8px; font-size:1rem; }
+.result a.plan-link{ color:var(--ok); font-weight:600; word-break:break-all; text-underline-offset:3px; }
+.result .sum{ font-size:.85rem; color:var(--muted); margin-top:6px; }
+
+footer{ text-align:center; color:var(--faint); font-size:.72rem; padding:0 18px 44px; font-family:var(--mono); }
+
+@media (max-width:640px){ .grid2{ grid-template-columns:1fr; } .derived{ grid-template-columns:1fr; } }
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  html{ scroll-behavior:auto; } body{ animation:none !important; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🧪</div>
+  <div>
+    <h1>Test Plan Creator</h1>
+    <div class="sub">Azure DevOps / TFS · fixed 21-suite scaffold + requirement suites</div>
+  </div>
+  <div class="pill" id="connPill">● Not connected</div>
+</header>
+
+<main>
+
+  <!-- STEP 1 — CONNECT -->
+  <section class="panel" id="step1">
+    <div class="step-head">
+      <div class="step-num">1</div><h2>Connect</h2>
+      <div class="hint">PAT never leaves this page</div>
+    </div>
+    <div class="grid2">
+      <div>
+        <label for="tfsUrl">TFS Collection URL</label>
+        <input type="text" id="tfsUrl" value="https://tfs.casepoint.in/tfs/Casepoint" spellcheck="false">
+      </div>
+      <div>
+        <label for="pat">Personal Access Token</label>
+        <div style="display:flex;gap:8px">
+          <input type="password" id="pat" placeholder="paste your PAT" spellcheck="false" autocomplete="off">
+          <button class="btn ghost" id="patEye" type="button" title="show/hide" style="flex:none">👁</button>
+        </div>
+      </div>
+    </div>
+    <div class="frow" style="margin-top:14px;align-items:center">
+      <label class="chk" style="text-transform:none;letter-spacing:0;flex:none">
+        <input type="checkbox" id="remember"> Remember on this device
+      </label>
+      <div style="flex:1"></div>
+      <button class="btn" id="btnConnect" style="flex:none">Connect</button>
+    </div>
+    <div class="msg" id="connMsg"></div>
+  </section>
+
+  <!-- STEP 2 — CONFIGURE -->
+  <section class="panel locked" id="step2">
+    <div class="step-head">
+      <div class="step-num">2</div><h2>Configure</h2>
+      <div class="hint">replaces testplan-config.json — all values fetched live from TFS</div>
+    </div>
+    <div class="grid4">
+      <div>
+        <label for="projectSel">Project</label>
+        <select id="projectSel"></select>
+      </div>
+      <div>
+        <label for="areaSel">Team / Area Path</label>
+        <select id="areaSel"><option value="">— loading —</option></select>
+      </div>
+      <div>
+        <label for="iterSel">Iteration</label>
+        <select id="iterSel"><option value="">— loading —</option></select>
+      </div>
+      <div>
+        <label for="tagSel">Regression Tag (optional)</label>
+        <select id="tagSel"><option value="">— loading —</option></select>
+        <input type="text" id="tagCustom" placeholder="type custom tag…" style="display:none;margin-top:8px" spellcheck="false">
+      </div>
+    </div>
+    <dl class="derived">
+      <dt>Plan name</dt><dd id="dPlan">—</dd>
+      <dt>Area path</dt><dd id="dArea">—</dd>
+      <dt>Iteration path</dt><dd id="dIter">—</dd>
+      <dt>Dynamic-suite WIQL tag</dt><dd id="dTag">—</dd>
+    </dl>
+    <div class="frow" style="margin-top:14px">
+      <div class="msg info" id="cfgMsg" style="margin:0;align-self:center"></div>
+      <div style="flex:1"></div>
+      <button class="btn" id="btnScan" disabled style="flex:none">Scan Requirements →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3 — REQUIREMENT SUITES -->
+  <section class="panel locked" id="step3">
+    <div class="step-head">
+      <div class="step-num">3</div><h2>Requirement Suites</h2>
+      <div class="hint">requirements + change requests · pre-ticked = has a “TC Generation” child task · added under Level-2 → Functional Testing</div>
+    </div>
+    <div class="msg info" id="reqSummary" style="margin:0 0 10px"></div>
+    <div class="frow" style="margin-bottom:10px">
+      <button class="btn ghost" id="selEligible" style="flex:none">Select TC-Gen only</button>
+      <button class="btn ghost" id="selAll" style="flex:none">Select all</button>
+      <button class="btn ghost" id="selNone" style="flex:none">Clear</button>
+    </div>
+    <div class="tbl-wrap">
+      <table id="reqTbl">
+        <thead><tr><th></th><th>ID</th><th>Type</th><th>Title</th><th>State</th><th>Children</th><th>TC Generation</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="frow" style="margin-top:14px">
+      <div style="flex:1"></div>
+      <button class="btn" id="btnPreview" style="flex:none">Build Preview →</button>
+    </div>
+  </section>
+
+  <!-- STEP 4 — PREVIEW & CREATE -->
+  <section class="panel locked" id="step4">
+    <div class="step-head">
+      <div class="step-num">4</div><h2>Preview &amp; Create</h2>
+      <div class="hint">clicking Create writes to TFS immediately</div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="tree" id="treePreview"></div>
+    <div class="frow">
+      <div style="flex:1"></div>
+      <button class="btn" id="btnCreate" style="flex:none">🚀 Create Test Plan</button>
+    </div>
+    <div class="prog" id="prog"><div class="fill" id="progFill"></div></div>
+    <div class="prog-txt" id="progTxt"></div>
+    <div class="log" id="runLog"></div>
+    <div class="result" id="resultCard"></div>
+  </section>
+
+</main>
+
+<footer>
+  Direct browser → TFS REST (api-version 7.1-preview) · fully self-contained single file · no external requests except your TFS server
+</footer>
+
+<script>
+'use strict';
+/* =====================================================================
+   TFS Test Plan Creator — single-file web tool
+   Mirrors the testplan-creator agent:
+   plan → 21-suite fixed scaffold (17 static + 4 dynamic tag-query) →
+   RequirementTestSuites under Level-2 → Functional Testing.
+   Suites are created in REVERSE display order (TFS lists newest-first).
+   ===================================================================== */
+
+const $ = id => document.getElementById(id);
+
+const SUITE_TREE = [
+  { name:'Manual testing', children:[
+    { name:'QA Testing', children:[
+      { name:'Level-2 Testing', children:[
+        { name:'Functional Testing', key:'l2func' },
+        { name:'Re-testing' },
+        { name:'Regression Testing' },
+      ]},
+      { name:'Level-3 Testing', children:[
+        { name:'Functional Testing' },
+        { name:'Re-testing' },
+      ]},
+    ]},
+    { name:'PT Testing', children:[
+      { name:'PT Regressions', dynamic:true },
+      { name:'PT Verification' },
+    ]},
+    { name:'Production Testing', children:[
+      { name:'PROD Regression', dynamic:true },
+      { name:'PROD Verification' },
+    ]},
+    { name:'Azure Testing', children:[
+      { name:'Azure Verification' },
+      { name:'Azure Regression', dynamic:true },
+    ]},
+    { name:'CA Testing', children:[
+      { name:'CA Regression', dynamic:true },
+      { name:'CA Verification' },
+    ]},
+  ]},
+];
+// Full scaffold = 17 static + 4 dynamic tag-query suites. With no regression tag the
+// 4 dynamic suites are skipped entirely (17 static only) — see activeTree()/scaffoldCount().
+const pruneDynamic = defs => defs.filter(d => !d.dynamic).map(d => d.children ? { ...d, children: pruneDynamic(d.children) } : d);
+function activeTree(){ return currentTag() ? SUITE_TREE : pruneDynamic(SUITE_TREE); }
+function scaffoldCount(){ return currentTag() ? 21 : 17; }
+
+const state = {
+  url:'', pat:'', user:'',
+  project:'', areas:[], iters:[], tags:[],
+  areaPath:'', teamName:'', iterPath:'', iterName:'',
+  reqs:[], scanMode:'', creating:false, created:false,
+};
+
+/* ---------- helpers ---------- */
+const collection = () => state.url.replace(/\/+$/,'');
+const projApi    = () => `${collection()}/${encodeURIComponent(state.project)}/_apis`;
+const suitesUrl  = planId => `${projApi()}/testplan/Plans/${planId}/suites?api-version=7.1-preview.1`;
+const escWiql    = s => String(s).replace(/'/g, "''");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function currentTag(){
+  const v = $('tagSel').value;
+  return v === '__custom__' ? $('tagCustom').value.trim() : v;
+}
+function dynQuery(){
+  // NOTE: must be IN GROUP 'Microsoft.TestCaseCategory' — the testplan suites API rejects
+  // [System.WorkItemType] = 'Test Case' with HTTP 400 "QueryString property is not within
+  // the permissible values" (verified against tfs.casepoint.in 2026-07-15).
+  return `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.WorkItemType] IN GROUP 'Microsoft.TestCaseCategory' AND [System.Tags] CONTAINS '${escWiql(currentTag())}'`;
+}
+function planName(){
+  return `${state.project}\\${state.teamName}\\${state.iterName}`;
+}
+
+async function api(url, opts = {}){
+  const headers = {
+    'Authorization': 'Basic ' + btoa(':' + state.pat),
+    ...(opts.body ? {'Content-Type':'application/json'} : {}),
+    ...(opts.headers || {}),
+  };
+  let res;
+  try { res = await fetch(url, { ...opts, headers }); }
+  catch (e) { throw new Error('Network/CORS error — is the TFS URL reachable from this machine? (' + e.message + ')'); }
+  const text = await res.text();
+  // On-prem TFS returns 203 + an HTML sign-in page when the PAT is bad
+  if (res.status === 203 || (res.ok && text && text.trim().startsWith('<'))) {
+    throw new Error('Authentication failed — check your PAT (TFS returned a sign-in page).');
+  }
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch(_){}
+  if (!res.ok) {
+    const msg = (data && (data.message || data.value && data.value.Message)) || text.slice(0,300) || res.statusText;
+    const err = new Error(`HTTP ${res.status}: ${msg}`);
+    err.status = res.status; err.data = data;
+    throw err;
+  }
+  return data;
+}
+
+function unlock(id){ $(id).classList.remove('locked'); }
+function setMsg(id, txt, cls){ const el = $(id); el.textContent = txt; el.className = 'msg ' + (cls||'info'); }
+
+/* ---------- STEP 1 — connect ---------- */
+$('patEye').addEventListener('click', () => {
+  const p = $('pat'); p.type = p.type === 'password' ? 'text' : 'password';
+});
+$('pat').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnConnect').click(); });
+
+// restore saved connection
+(function restore(){
+  const u = localStorage.getItem('tpc_url'); if (u) $('tfsUrl').value = u;
+  const p = localStorage.getItem('tpc_pat'); if (p) { $('pat').value = atob(p); $('remember').checked = true; }
+})();
+
+$('btnConnect').addEventListener('click', async () => {
+  state.url = $('tfsUrl').value.trim();
+  state.pat = $('pat').value.trim();
+  if (!state.url || !state.pat) { setMsg('connMsg','TFS URL and PAT are both required.','err'); return; }
+  const btn = $('btnConnect');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Connecting…';
+  setMsg('connMsg','');
+  try {
+    const data = await api(`${collection()}/_apis/projects?api-version=7.1-preview.4&$top=500`);
+    const names = (data.value || []).map(p => p.name).sort((a,b)=>a.localeCompare(b));
+    if (!names.length) throw new Error('Connected, but no projects are visible to this PAT.');
+    try {
+      const cd = await api(`${collection()}/_apis/connectionData`);
+      state.user = (cd.authenticatedUser && cd.authenticatedUser.providerDisplayName) || '';
+    } catch(_){}
+    localStorage.setItem('tpc_url', state.url);
+    if ($('remember').checked) localStorage.setItem('tpc_pat', btoa(state.pat));
+    else localStorage.removeItem('tpc_pat');
+
+    const last = localStorage.getItem('tpc_lastProject');
+    const pre = names.includes(last) ? last : (names.includes('CasepointARA') ? 'CasepointARA' : names[0]);
+    $('projectSel').innerHTML = names.map(n => `<option ${n===pre?'selected':''}>${esc(n)}</option>`).join('');
+
+    const pill = $('connPill');
+    pill.textContent = '● Connected' + (state.user ? ' · ' + state.user : '');
+    pill.classList.add('on');
+    setMsg('connMsg', `Connected — ${names.length} project(s) visible.`, 'ok');
+    unlock('step2');
+    onProject();
+  } catch (e) {
+    setMsg('connMsg', e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Connect';
+  }
+});
+
+/* ---------- STEP 2 — configure ---------- */
+function flatten(node, parentPath, depth, out){
+  const path = parentPath ? parentPath + '\\' + node.name : node.name;
+  out.push({ name:node.name, path, depth, attributes:node.attributes || null });
+  (node.children || []).forEach(c => flatten(c, path, depth + 1, out));
+  return out;
+}
+const fmtD = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit', timeZone:'UTC' });
+};
+
+$('projectSel').addEventListener('change', onProject);
+
+async function onProject(){
+  state.project = $('projectSel').value;
+  localStorage.setItem('tpc_lastProject', state.project);
+  $('areaSel').innerHTML = '<option value="">— loading —</option>';
+  $('iterSel').innerHTML = '<option value="">— loading —</option>';
+  $('tagSel').innerHTML  = '<option value="">— loading —</option>';
+  setMsg('cfgMsg','Loading area paths, iterations and tags…');
+  const [areasR, itersR, tagsR] = await Promise.allSettled([
+    api(`${projApi()}/wit/classificationnodes/Areas?$depth=10&api-version=7.1-preview.2`),
+    api(`${projApi()}/wit/classificationnodes/Iterations?$depth=10&api-version=7.1-preview.2`),
+    api(`${projApi()}/wit/tags?api-version=7.1-preview.1`),
+  ]);
+  if (areasR.status === 'rejected' || itersR.status === 'rejected') {
+    setMsg('cfgMsg', 'Failed to load project metadata: ' + (areasR.reason || itersR.reason).message, 'err');
+    return;
+  }
+  const saved = JSON.parse(localStorage.getItem('tpc_last_' + state.project) || '{}');
+
+  // areas — full tree incl. project root
+  state.areas = flatten(areasR.value, '', 0, []);
+  $('areaSel').innerHTML = '<option value="">— select team / area —</option>' + state.areas.map(a => {
+    const pad = '  '.repeat(a.depth) + (a.depth ? '└ ' : '');
+    const label = a.depth ? a.name : a.name + ' (project root)';
+    return `<option value="${esc(a.path)}" ${a.path===saved.area?'selected':''}>${pad}${esc(label)}</option>`;
+  }).join('');
+
+  // iterations — skip project root node
+  state.iters = flatten(itersR.value, '', 0, []).filter(n => n.depth >= 1);
+  const today = new Date(); today.setUTCHours(0,0,0,0);
+  let preIdx = -1;
+  state.iters.forEach((n,i) => {
+    const at = n.attributes || {};
+    if (at.startDate && at.finishDate) {
+      const s = new Date(at.startDate), f = new Date(at.finishDate);
+      if (s <= today && today <= f && preIdx === -1) preIdx = i;
+    }
+  });
+  if (saved.iter && state.iters.some(n => n.path === saved.iter)) preIdx = state.iters.findIndex(n => n.path === saved.iter);
+  if (preIdx === -1) { // nearest upcoming, else last
+    preIdx = state.iters.findIndex(n => n.attributes && n.attributes.startDate && new Date(n.attributes.startDate) > today);
+    if (preIdx === -1) preIdx = state.iters.length - 1;
+  }
+  $('iterSel').innerHTML = '<option value="">— select iteration —</option>' + state.iters.map((n,i) => {
+    const at = n.attributes || {};
+    const dates = at.startDate ? `${fmtD(at.startDate)} → ${fmtD(at.finishDate)}` : '';
+    const pad = '  '.repeat(n.depth - 1) + (n.depth > 1 ? '└ ' : '');
+    return `<option value="${esc(n.path)}" title="${esc(dates)}" ${i===preIdx?'selected':''}>${pad}${esc(n.name)}</option>`;
+  }).join('');
+
+  // tags — Regression_* only, plus custom
+  let tagOpts = '<option value="">— no tag (skip regression suites) —</option>';
+  if (tagsR.status === 'fulfilled') {
+    state.tags = (tagsR.value.value || []).map(t => t.name).filter(n => /^regression_/i.test(n)).sort((a,b)=>a.localeCompare(b));
+    tagOpts += state.tags.map(t => `<option value="${esc(t)}" ${t===saved.tag?'selected':''}>${esc(t)}</option>`).join('');
+  } else {
+    state.tags = [];
+  }
+  tagOpts += `<option value="__custom__" ${saved.tag && !state.tags.includes(saved.tag) ? 'selected':''}>✏️ Custom tag…</option>`;
+  $('tagSel').innerHTML = tagOpts;
+  if (saved.tag && !state.tags.includes(saved.tag)) { $('tagCustom').style.display='block'; $('tagCustom').value = saved.tag; }
+  setMsg('cfgMsg', tagsR.status === 'rejected' ? 'Tag list unavailable — use the custom tag option.' : '');
+  updateDerived();
+}
+
+['areaSel','iterSel','tagSel','tagCustom'].forEach(id => $(id).addEventListener(id==='tagCustom'?'input':'change', () => {
+  if (id === 'tagSel') $('tagCustom').style.display = $('tagSel').value === '__custom__' ? 'block' : 'none';
+  updateDerived();
+}));
+
+let tagCountTimer = null;
+function checkTagCount(){
+  const tag = currentTag();
+  state.tagCount = null;
+  if (!tag) return;
+  clearTimeout(tagCountTimer);
+  tagCountTimer = setTimeout(async () => {
+    $('dTag').textContent = `${tag} · counting matching test cases…`;
+    try {
+      const r = await api(`${projApi()}/wit/wiql?api-version=7.1-preview.2`, { method:'POST', body: JSON.stringify({ query: dynQuery() }) });
+      const n = (r.workItems || []).length;
+      state.tagCount = n;
+      if (currentTag() !== tag) return; // user changed it meanwhile
+      $('dTag').textContent = `${tag} · ${n} matching test case(s)`;
+      $('dTag').style.color = n === 0 ? 'var(--warn)' : '';
+    } catch (e) {
+      if (currentTag() !== tag) return;
+      $('dTag').textContent = `${tag} · ⚠ query check failed: ${e.message}`;
+      $('dTag').style.color = 'var(--warn)';
+    }
+  }, 400);
+}
+
+function updateDerived(){
+  const areaPath = $('areaSel').value;
+  const iterPath = $('iterSel').value;
+  const tag = currentTag();
+  const areaNode = state.areas.find(a => a.path === areaPath);
+  const iterNode = state.iters.find(n => n.path === iterPath);
+  state.areaPath = areaPath;
+  state.teamName = areaNode ? areaNode.name : '';
+  state.iterPath = iterPath;
+  state.iterName = iterNode ? iterNode.name : '';
+  $('dPlan').textContent = (areaPath && iterPath) ? planName() : '—';
+  $('dArea').textContent = areaPath || '—';
+  $('dIter').textContent = iterPath ? iterPath + '  (dates auto-populate from the iteration node)' : '—';
+  $('dTag').textContent  = tag || 'none — the 4 regression (dynamic) suites will be skipped';
+  $('dTag').style.color = '';
+  checkTagCount();
+  const ready = !!(areaPath && iterPath);   // tag is optional
+  $('btnScan').disabled = !ready;
+  if (areaPath && iterPath) {
+    localStorage.setItem('tpc_last_' + state.project, JSON.stringify({ area:areaPath, iter:iterPath, tag }));
+  }
+}
+
+/* ---------- STEP 3 — scan requirements ---------- */
+$('btnScan').addEventListener('click', scan);
+
+async function scan(){
+  const btn = $('btnScan');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Scanning…';
+  try {
+    const wiqlUrl = `${projApi()}/wit/wiql?api-version=7.1-preview.2`;
+    // Change Request is in Microsoft.RequirementCategory on this server, so it is valid
+    // as a RequirementTestSuite requirementId (probe-verified 2026-07-15).
+    const base = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.WorkItemType] IN ('Requirement', 'Change Request') AND [System.AreaPath] UNDER '${escWiql(state.areaPath)}'`;
+    let r = await api(wiqlUrl, { method:'POST', body: JSON.stringify({ query: `${base} AND [System.IterationPath] = '${escWiql(state.iterPath)}'` }) });
+    let ids = (r.workItems || []).map(w => w.id);
+    state.scanMode = 'exact';
+    if (!ids.length) {
+      r = await api(wiqlUrl, { method:'POST', body: JSON.stringify({ query: `${base} AND [System.IterationPath] UNDER '${escWiql(state.iterPath)}'` }) });
+      ids = (r.workItems || []).map(w => w.id);
+      state.scanMode = 'under';
+    }
+
+    const batchUrl = `${collection()}/_apis/wit/workitemsbatch?api-version=7.1-preview.1`;
+    const items = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const b = await api(batchUrl, { method:'POST', body: JSON.stringify({ ids: ids.slice(i, i+200), '$expand':'relations' }) });
+      items.push(...(b.value || []));
+    }
+    const reqChildren = new Map(); const childIds = new Set();
+    for (const wi of items) {
+      const kids = (wi.relations || [])
+        .filter(rel => rel.rel === 'System.LinkTypes.Hierarchy-Forward')
+        .map(rel => parseInt(rel.url.split('/').pop(), 10));
+      reqChildren.set(wi.id, kids);
+      kids.forEach(k => childIds.add(k));
+    }
+    const childMap = new Map(); const call = [...childIds];
+    for (let i = 0; i < call.length; i += 200) {
+      const b = await api(batchUrl, { method:'POST', body: JSON.stringify({ ids: call.slice(i, i+200), fields:['System.Title','System.WorkItemType'] }) });
+      (b.value || []).forEach(c => childMap.set(c.id, c.fields));
+    }
+    state.reqs = items.map(wi => {
+      const kids = reqChildren.get(wi.id) || [];
+      const eligible = kids.some(k => {
+        const f = childMap.get(k);
+        return f && f['System.WorkItemType'] === 'Task' && /tc generation/i.test(f['System.Title'] || '');
+      });
+      return { id: wi.id, title: wi.fields['System.Title'] || '', type: wi.fields['System.WorkItemType'] || 'Requirement', state: wi.fields['System.State'] || '', childCount: kids.length, eligible, checked: eligible };
+    }).sort((a,b) => a.id - b.id);
+
+    renderReqs();
+    unlock('step3');
+    $('step3').scrollIntoView({ behavior:'smooth', block:'start' });
+  } catch (e) {
+    setMsg('cfgMsg', 'Scan failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Scan Requirements →';
+  }
+}
+
+function renderReqs(){
+  const tb = $('reqTbl').querySelector('tbody');
+  const eligibleN = state.reqs.filter(r => r.eligible).length;
+  const nReq = state.reqs.filter(r => r.type === 'Requirement').length;
+  const nCr  = state.reqs.length - nReq;
+  $('reqSummary').textContent = state.reqs.length
+    ? `${state.reqs.length} work item(s) in ${state.iterPath} (${nReq} requirement, ${nCr} change request)${state.scanMode==='under' ? ' — matched via nested iterations' : ''} — ${eligibleN} with a TC Generation task (pre-ticked).`
+    : 'No requirements or change requests found in this area + iteration — the plan will be created with the scaffold only.';
+  tb.innerHTML = state.reqs.map((r,i) => `
+    <tr class="${r.checked ? '' : 'off'}">
+      <td><input type="checkbox" data-i="${i}" ${r.checked ? 'checked' : ''} style="accent-color:#F5B94E;width:15px;height:15px;cursor:pointer"></td>
+      <td><a href="${collection()}/${encodeURIComponent(state.project)}/_workitems/edit/${r.id}" target="_blank" rel="noopener">${r.id}</a></td>
+      <td>${r.type === 'Change Request' ? '<span class="badge cr">Change Request</span>' : '<span class="badge req">Requirement</span>'}</td>
+      <td>${esc(r.title)}</td>
+      <td><span class="badge state">${esc(r.state)}</span></td>
+      <td style="text-align:center">${r.childCount}</td>
+      <td>${r.eligible ? '<span class="badge yes">TC Gen ✓</span>' : '<span class="badge no">no TC Gen</span>'}</td>
+    </tr>`).join('') || '<tr><td colspan="7" style="color:var(--faint)">— none —</td></tr>';
+  tb.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => {
+    state.reqs[+cb.dataset.i].checked = cb.checked;
+    cb.closest('tr').classList.toggle('off', !cb.checked);
+    if (!$('step4').classList.contains('locked')) buildPreview();
+  }));
+}
+$('selEligible').addEventListener('click', () => { state.reqs.forEach(r => r.checked = r.eligible); renderReqs(); if (!$('step4').classList.contains('locked')) buildPreview(); });
+$('selAll').addEventListener('click', () => { state.reqs.forEach(r => r.checked = true); renderReqs(); if (!$('step4').classList.contains('locked')) buildPreview(); });
+$('selNone').addEventListener('click', () => { state.reqs.forEach(r => r.checked = false); renderReqs(); if (!$('step4').classList.contains('locked')) buildPreview(); });
+
+/* ---------- STEP 4 — preview & create ---------- */
+$('btnPreview').addEventListener('click', () => {
+  buildPreview();
+  unlock('step4');
+  $('step4').scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
+function buildPreview(){
+  const sel = state.reqs.filter(r => r.checked);
+  const tag = currentTag();
+  $('chips').innerHTML = `
+    <span class="chip grad"><b>${esc(planName())}</b></span>
+    <span class="chip">Area <b>${esc(state.areaPath)}</b></span>
+    <span class="chip">Iteration <b>${esc(state.iterName)}</b></span>
+    ${tag ? `<span class="chip">Tag <b>${esc(tag)}</b></span>` : `<span class="chip">No tag — <b>regression suites skipped</b></span>`}
+    <span class="chip"><b>${scaffoldCount()}</b> scaffold suites</span>
+    <span class="chip"><b>${sel.length}</b> requirement suites</span>`;
+  let html = `<div class="tnode root"><span class="tname">${esc(planName())}</span><span class="badge req">root</span></div>`;
+  const walk = (defs, prefix) => {
+    defs.forEach((d, i) => {
+      const last = i === defs.length - 1;
+      html += `<div class="tnode"><span class="tguide">${prefix}${last ? '└─' : '├─'}</span><span class="tname">${esc(d.name)}</span>${d.dynamic ? '<span class="badge dyn">Dynamic · tag query</span>' : ''}</div>`;
+      const nextPrefix = prefix + (last ? '   ' : '│  ');
+      if (d.children) walk(d.children, nextPrefix);
+      if (d.key === 'l2func' && sel.length) {
+        sel.forEach((r, j) => {
+          const rl = j === sel.length - 1;
+          html += `<div class="tnode"><span class="tguide">${nextPrefix}${rl ? '└─' : '├─'}</span><span class="tname" style="color:#9FB3AB">${r.id} ${esc(r.title)}</span><span class="badge ${r.type === 'Change Request' ? 'cr' : 'req'}">${esc(r.type)}</span></div>`;
+        });
+      }
+    });
+  };
+  walk(activeTree(), '');
+  html += tag
+    ? `<div style="margin-top:10px;font-size:.78rem;color:var(--faint)">Dynamic suites query: <code style="font-family:var(--mono);color:#42C79F">${esc(dynQuery())}</code></div>`
+    : `<div style="margin-top:10px;font-size:.78rem;color:var(--faint)">No regression tag selected — PT Regressions / PROD Regression / Azure Regression / CA Regression are skipped.</div>`;
+  $('treePreview').innerHTML = html;
+}
+
+/* ---- reset for a new plan (keeps step 1 connection + step 2 selections) ---- */
+function resetForNewPlan(){
+  state.creating = false; state.created = false;
+  state.reqs = []; state.scanMode = '';
+  scaffoldFailures = [];
+  Object.keys(keyIds).forEach(k => delete keyIds[k]);
+  // step 3
+  $('step3').classList.add('locked');
+  $('reqTbl').querySelector('tbody').innerHTML = '';
+  $('reqSummary').textContent = '';
+  // step 4
+  $('step4').classList.add('locked');
+  $('chips').innerHTML = '';
+  $('treePreview').innerHTML = '';
+  $('prog').style.display = 'none';
+  $('progFill').style.width = '0%';
+  $('progTxt').textContent = '';
+  $('runLog').innerHTML = ''; $('runLog').style.display = 'none';
+  $('resultCard').style.display = 'none'; $('resultCard').innerHTML = '';
+  const btn = $('btnCreate');
+  btn.disabled = false; btn.textContent = '🚀 Create Test Plan';
+  $('step2').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+/* ---- creation ---- */
+let progDone = 0, progTotal = 0;
+function tick(){
+  progDone++;
+  $('progFill').style.width = Math.round(progDone / progTotal * 100) + '%';
+  $('progTxt').textContent = `${progDone} / ${progTotal}`;
+}
+function log(msg, cls){
+  const el = $('runLog');
+  el.style.display = 'block';
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = msg;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+}
+
+const keyIds = {};
+let scaffoldFailures = [];
+async function createLevel(planId, parentId, defs, depth){
+  const idByName = {};
+  for (const def of [...defs].reverse()) {           // reverse: TFS displays newest-first
+    const body = def.dynamic
+      ? { name:def.name, suiteType:'DynamicTestSuite', parentSuite:{ id:parentId }, queryString: dynQuery() }
+      : { name:def.name, suiteType:'StaticTestSuite',  parentSuite:{ id:parentId } };
+    try {
+      const s = await api(suitesUrl(planId), { method:'POST', body: JSON.stringify(body) });
+      idByName[def.name] = s.id;
+      if (def.key) keyIds[def.key] = s.id;
+      log(`  ${'  '.repeat(depth)}✓ ${def.name}${def.dynamic ? ' [Dynamic]' : ''}  (suite ${s.id})`, 'ok');
+    } catch (e) {
+      // Dynamic suites have no children — log, remember, and keep building the rest of
+      // the scaffold instead of stranding a partial plan. Static failures are structural
+      // (children need the parent id) so those still abort.
+      if (!def.dynamic) throw e;
+      scaffoldFailures.push(def.name);
+      log(`  ${'  '.repeat(depth)}⚠ ${def.name} [Dynamic] failed: ${e.message} — continuing`, 'warn');
+    }
+    tick();
+  }
+  for (const def of defs) {
+    if (def.children && def.children.length) await createLevel(planId, idByName[def.name], def.children, depth + 1);
+  }
+}
+
+$('btnCreate').addEventListener('click', async () => {
+  if (state.creating || state.created) return;
+  const tag = currentTag();
+  if (!state.areaPath || !state.iterPath) { log('Missing configuration — pick area and iteration first.', 'err'); return; }
+  state.creating = true;
+  const btn = $('btnCreate');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Creating…';
+  const sel = [...state.reqs.filter(r => r.checked)].sort((a,b) => a.id - b.id);
+  const scafTotal = scaffoldCount();
+  progDone = 0; progTotal = 1 + scafTotal + sel.length;
+  $('prog').style.display = 'block';
+  $('runLog').innerHTML = ''; $('resultCard').style.display = 'none';
+  let planId = null, rootId = null;
+  scaffoldFailures = [];
+
+  try {
+    // TFS does NOT reject duplicate plan names (verified: two identical plans created fine),
+    // so check for an existing same-name plan first and refuse to create a second one.
+    log(`Checking for an existing plan named "${planName()}" …`);
+    const dupQ = `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project AND [System.WorkItemType] = 'Test Plan' AND [System.Title] = '${escWiql(planName())}'`;
+    const dup = await api(`${projApi()}/wit/wiql?api-version=7.1-preview.2`, { method:'POST', body: JSON.stringify({ query: dupQ }) });
+    const dupIds = (dup.workItems || []).map(w => w.id);
+    if (dupIds.length) {
+      log(`✗ A test plan named "${planName()}" already exists (ID ${dupIds.join(', ')}) — creation stopped. One plan per area + iteration.`, 'err');
+      const rc = $('resultCard');
+      rc.className = 'result bad';
+      rc.innerHTML = `<h3>⚠ Plan already exists — nothing was created</h3>
+        <div class="sum">There must be only one test plan per area + iteration. Existing plan${dupIds.length > 1 ? 's' : ''}:</div>
+        <div class="sum">${dupIds.map(id => `<a class="plan-link" href="${collection()}/${encodeURIComponent(state.project)}/_testPlans/define?planId=${id}" target="_blank" rel="noopener">${esc(planName())} (ID ${id})</a>`).join('<br>')}</div>
+        <div class="sum">Open the existing plan above, or pick a different area / iteration and try again.</div>`;
+      rc.style.display = 'block';
+      rc.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      state.creating = false;
+      btn.disabled = false; btn.textContent = '🚀 Create Test Plan';
+      return;
+    }
+    log('✓ No existing plan with this name.', 'ok');
+
+    if (tag) {
+      log('Preflight: validating the dynamic-suite WIQL against TFS…');
+      try {
+        const pre = await api(`${projApi()}/wit/wiql?api-version=7.1-preview.2`, { method:'POST', body: JSON.stringify({ query: dynQuery() }) });
+        log(`✓ Query is valid — ${(pre.workItems || []).length} test case(s) match tag "${tag}".`, 'ok');
+      } catch (e) {
+        throw new Error(`Dynamic-suite query rejected by TFS before anything was created: ${e.message}`);
+      }
+    } else {
+      log('No regression tag selected — skipping the 4 dynamic regression suites (17 static suites only).');
+    }
+
+    log(`Creating plan "${planName()}" …`);
+    const plan = await api(`${projApi()}/testplan/plans?api-version=7.1-preview.1`, {
+      method:'POST',
+      body: JSON.stringify({ name: planName(), areaPath: state.areaPath, iteration: state.iterPath }),
+    });
+    planId = plan.id; rootId = plan.rootSuite && plan.rootSuite.id;
+    log(`✓ Plan created — id ${planId}, root suite ${rootId}`, 'ok');
+    tick();
+
+    log(`Creating ${scafTotal}-suite scaffold (siblings in reverse display order)…`);
+    await createLevel(planId, rootId, activeTree(), 0);
+
+    log(`Creating ${sel.length} requirement suite(s) under Level-2 → Functional Testing (suite ${keyIds.l2func})…`);
+    const failures = [];
+    let createdReq = 0;
+    for (const r of [...sel].reverse()) {              // reverse for display order
+      try {
+        const s = await api(suitesUrl(planId), {
+          method:'POST',
+          body: JSON.stringify({ suiteType:'RequirementTestSuite', requirementId: r.id, parentSuite:{ id: keyIds.l2func } }),
+        });
+        createdReq++;
+        log(`  ✓ ${r.id} ${r.title}  (suite ${s.id})`, 'ok');
+      } catch (e) {
+        failures.push(r);
+        log(`  ⚠ ${r.id} failed: ${e.message} — will verify at the end`, 'warn');
+      }
+      tick();
+    }
+    // TFS sometimes returns non-2xx even though the suite WAS created — reconcile
+    if (failures.length) {
+      try {
+        const suite = await api(`${projApi()}/testplan/Plans/${planId}/suites/${keyIds.l2func}?expand=children&api-version=7.1-preview.1`);
+        const kids = suite.children || [];
+        for (const f of [...failures]) {
+          if (kids.some(k => k.requirementId === f.id || (k.name || '').includes(String(f.id)))) {
+            failures.splice(failures.indexOf(f), 1);
+            createdReq++;
+            log(`  ✓ ${f.id} was actually created server-side (reconciled)`, 'ok');
+          }
+        }
+      } catch(_){}
+    }
+
+    const url = `${collection()}/${encodeURIComponent(state.project)}/_testPlans/define?planId=${planId}&suiteId=${rootId}`;
+    const rc = $('resultCard');
+    rc.className = 'result';
+    rc.innerHTML = `
+      <h3>✅ Test plan created</h3>
+      <a class="plan-link" href="${url}" target="_blank" rel="noopener">${esc(planName())} (ID ${planId})</a>
+      <div class="sum">Suites: ${scafTotal - scaffoldFailures.length}/${scafTotal} scaffold (${tag ? `17 static + 4 dynamic, tag: <b>${esc(tag)}</b>` : '17 static — no regression tag, dynamic suites skipped'}) + ${createdReq} requirement suite(s)
+      ${scaffoldFailures.length ? `<br><span style="color:var(--err)">Failed dynamic suites: ${scaffoldFailures.map(esc).join(', ')} — add manually in TFS.</span>` : ''}
+      ${failures.length ? `<br><span style="color:var(--err)">Failed requirement suites: ${failures.map(f=>f.id).join(', ')} — add manually in TFS.</span>` : ''}
+      <br>Requirement suites: scanned ${state.reqs.length}, selected ${sel.length}, skipped ${state.reqs.length - sel.length}.</div>
+      <div style="margin-top:12px"><button class="btn ghost" onclick="resetForNewPlan()">Start a new plan</button></div>`;
+    rc.style.display = 'block';
+    rc.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    state.created = true;
+    btn.textContent = 'Created ✓';
+  } catch (e) {
+    log(`✗ ${e.message}`, 'err');
+    const rc = $('resultCard');
+    rc.className = 'result bad';
+    rc.innerHTML = `<h3>⚠ Creation failed</h3>
+      <div class="sum">${esc(e.message)}</div>
+      ${planId ? `<div class="sum">A partial plan may exist: <a class="plan-link" href="${collection()}/${encodeURIComponent(state.project)}/_testPlans/define?planId=${planId}&suiteId=${rootId}" target="_blank" rel="noopener">plan ${planId}</a> — review it in TFS before retrying (re-running with the same name will hit a duplicate-name error).</div>` : ''}`;
+    rc.style.display = 'block';
+    state.creating = false;
+    btn.disabled = false; btn.textContent = '🚀 Create Test Plan';
+  }
+});
+</script>
+</body>
+</html>
