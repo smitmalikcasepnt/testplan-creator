@@ -536,8 +536,11 @@ async function onProject(){
   }
   const saved = JSON.parse(localStorage.getItem('tpc_last_' + state.project) || '{}');
 
-  // areas — full tree incl. project root
-  state.areas = flatten(areasR.value, '', 0, []);
+  // areas — full tree incl. project root, sorted A→Z at each level
+  // (children only; the project root stays first). Iterations are left in
+  // their natural (chronological) order below.
+  const sortAreaTree = n => { if (n && n.children) { n.children.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'})); n.children.forEach(sortAreaTree); } return n; };
+  state.areas = flatten(sortAreaTree(areasR.value), '', 0, []);
   $('areaSel').innerHTML = '<option value="">— select team / area —</option>' + state.areas.map(a => {
     const pad = '  '.repeat(a.depth) + (a.depth ? '└ ' : '');
     const label = a.depth ? a.name : a.name + ' (project root)';
